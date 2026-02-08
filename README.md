@@ -12,7 +12,7 @@ Standard LLMs predict the *next token*.
 nanoJEPA predicts the **latent representation of the answer** from the **latent representation of the question**.
 
 ### Architecture
-![nanoJEPA Architecture](nanoJEPA arch.png)
+![nanoJEPA Architecture](nanoJEPA_architecture.png)
 *(Please save the provided architecture image as `nanoJEPA_architecture.png` in this directory)*
 
 - **Backbone**: Single decoder-only Transformer (GPT-2 style).
@@ -23,6 +23,27 @@ nanoJEPA predicts the **latent representation of the answer** from the **latent 
   - Attends to the Question.
   - Predicts the final hidden state of the Answer.
   - Does **not** see the Answer tokens (masked out).
+
+### Model Details
+| Parameter | Value | Description |
+| :--- | :--- | :--- |
+| **Layers** | 6 | Decoder-only Transformer blocks |
+| **Heads** | 8 | Attention heads |
+| **Embedding** | 512 | Hidden dimension |
+| **Params** | ~45M | Total trainable parameters |
+| **Training** | ~500 Steps | Extremely short (demo) run |
+| **Dataset** | GSM8K | Grade School Math (~7.5k samples) |
+
+> [!WARNING]
+> **Educational Demonstration Only**
+> This model has been trained for only **~500 iterations** (less than 1 epoch) on a small dataset. 
+> While the **JEPA architecture** is functional (as seen in the alignment plots), the **language generation** is severely undertrained.
+>
+> **Expect:** 
+> - Correct latent alignment (JEPA works!).
+> - Incorrect or repetitive math answers (Language model is essentially "baby" level).
+>
+> The goal is to demonstrate the *mechanism*, not to solve calculus.
 
 ### Attention Masking (The "Secret Sauce")
 To enforce JEPA constraints in a single Transformer:
