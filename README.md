@@ -12,6 +12,9 @@ Standard LLMs predict the *next token*.
 nanoJEPA predicts the **latent representation of the answer** from the **latent representation of the question**.
 
 ### Architecture
+![nanoJEPA Architecture](nanoJEPA arch.png)
+*(Please save the provided architecture image as `nanoJEPA_architecture.png` in this directory)*
+
 - **Backbone**: Single decoder-only Transformer (GPT-2 style).
 - **Views**: 
   - `View A`: Question (e.g., math problem).
@@ -33,21 +36,35 @@ To enforce JEPA constraints in a single Transformer:
 - `data.py`: GSM8K loading and tokenization.
 - `model.py`: Transformer with custom JEPA masking.
 - `train.py`: Training loop with Token Loss + JEPA Loss.
+- `demo.py`: **Interactive Gradio Interface**.
+- `eval_alignment.py`: Script to verify latent alignment.
 
 ## Usage
 
-### Install Dependencies
+### 1. Install Dependencies
 ```bash
-pip install torch tiktoken datasets transformers
+pip install torch tiktoken datasets transformers gradio matplotlib
 ```
 
-### Train
+### 2. Train
 ```bash
 python -m nanoJEPA.train
 ```
+*Note: The default run is short (educational). For better results, increase `max_iters` in `config.py`.*
 
-### Inspection
-Check `inspect_checkpoint.py` to view model weights and ensuring no NaNs.
+### 3. Interactive Demo (Gradio)
+Launch a web interface to test the model:
+```bash
+python demo.py
+```
+*The model uses greedy decoding to project the latent prediction into text.*
+
+### 4. Verify Latent Alignment
+Run the evaluation script to compare JEPA vs Baseline:
+```bash
+python eval_alignment.py
+```
+This generates `latent_alignment.png`, showing how the cosine similarity between `[PRED]` and `Answer` improves over time.
 
 ## Success Metrics
 - **Token Loss**: Ensures the model remains a competent language model.
