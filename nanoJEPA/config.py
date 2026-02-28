@@ -18,9 +18,9 @@ class Config:
     bias: bool = True            # Use bias in Linears and LayerNorms
 
     # Training
-    batch_size: int = 8          # Batch size
+    batch_size: int = 16         # Memory safety for RTX 3050 (8GB)
     learning_rate: float = 1e-4  # Learning rate (lowered for stability)
-    max_iters: int = 500         # Total training iterations (educational run)
+    num_epochs: int = 25         # Configured for competition run
     eval_interval: int = 50      # How often to evaluate
     eval_iters: int = 10         # How many batches to use for evaluation
     device: str = 'cpu'          # 'cuda', 'cpu', or 'mps'

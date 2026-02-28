@@ -29,9 +29,7 @@ def train_and_track(jepa_weight, steps=50, eval_interval=10):
     config.vocab_size = config.final_vocab_size 
     
     model = NanoJEPA(config)
-    device = 'cpu'
-    if torch.cuda.is_available():
-        device = 'cuda'
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.to(device)
     model.train()
     

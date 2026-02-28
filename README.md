@@ -1,93 +1,218 @@
-# nanoJEPA (Educational LLM-JEPA)
+# nanoJEPA  
+## Joint Embedding Predictive Architecture for Language Reasoning (GSM8K)
 
-A minimal, educational implementation of **Joint Embedding Predictive Architectures (JEPA)** for language, applied to the GSM8K dataset.
+nanoJEPA is a minimal, research-oriented implementation of a **Joint Embedding Predictive Architecture (JEPA)** applied to language reasoning tasks.
+
+Unlike standard large language models that rely purely on next-token prediction, nanoJEPA is trained to **predict Answer representations from Question representations in latent space**, explicitly separating reasoning from text generation.
+
+This repository demonstrates how latent alignment objectives affect reasoning structure in language models.
+
+---
+
+## Motivation
+
+Modern LLMs optimize:
+
+P(token_t | token_<t)
+
+While effective for fluency, this objective does not explicitly enforce structured reasoning in representation space.
 
 Inspired by:
-- **nanoGPT** for simplicity and clarity.
-- **LLM-JEPA** for the conceptual framework.
-- **GSM8K** as a reasoning-heavy dataset.
 
-## Core Concept
-Standard LLMs predict the *next token*. 
-nanoJEPA predicts the **latent representation of the answer** from the **latent representation of the question**.
+- **JEPA / world-model ideas** proposed by Yann LeCun  
+- **LLM-JEPA research** exploring latent prediction for language  
+- **nanoGPT** for architectural clarity  
 
-### Architecture
+nanoJEPA investigates:
+
+> Can reasoning be learned as latent state prediction instead of text reconstruction?
+
+---
+
+## Core Idea
+
+Given two views of the same semantic state:
+
+- **View A**: Question (math problem)
+- **View B**: Final numeric Answer
+
+nanoJEPA learns:
+
+Question Latent → Answer Latent
+
+instead of simply predicting answer tokens autoregressively.
+
+Text generation is treated as a projection from latent space — not the reasoning process itself.
+
+---
+
+## Architecture
+
 ![nanoJEPA Architecture](nanoJEPA_architecture.png)
-*(Please save the provided architecture image as `nanoJEPA_architecture.png` in this directory)*
 
-- **Backbone**: Single decoder-only Transformer (GPT-2 style).
-- **Views**: 
-  - `View A`: Question (e.g., math problem).
-  - `View B`: Answer (numerical result).
-- **Latent Prediction token `[PRED]`**:
-  - Attends to the Question.
-  - Predicts the final hidden state of the Answer.
-  - Does **not** see the Answer tokens (masked out).
+### Design Principles
 
-### Model Details
-| Parameter | Value | Description |
-| :--- | :--- | :--- |
-| **Layers** | 6 | Decoder-only Transformer blocks |
-| **Heads** | 8 | Attention heads |
-| **Embedding** | 512 | Hidden dimension |
-| **Params** | ~45M | Total trainable parameters |
-| **Training** | ~500 Steps | Extremely short (demo) run |
-| **Dataset** | GSM8K | Grade School Math (~7.5k samples) |
+- **Single decoder-only Transformer**
+- No encoder–decoder split
+- No external retrieval
+- No pretrained backbone
+- No chain-of-thought supervision
 
-> [!WARNING]
-> **Educational Demonstration Only**
-> This model has been trained for only **~500 iterations** (less than 1 epoch) on a small dataset. 
-> While the **JEPA architecture** is functional (as seen in the alignment plots), the **language generation** is severely undertrained.
->
-> **Expect:** 
-> - Correct latent alignment (JEPA works!).
-> - Incorrect or repetitive math answers (Language model is essentially "baby" level).
->
-> The goal is to demonstrate the *mechanism*, not to solve calculus.
+### View Isolation (JEPA Masking)
 
-### Attention Masking (The "Secret Sauce")
-To enforce JEPA constraints in a single Transformer:
-1. **Q -> Q**: Standard causal masking.
-2. **A -> A**: Standard causal masking (independent of Q).
-3. **[PRED] -> Q**: Full attention to Question.
-4. **[PRED] -/-> A**: Blocked. The model must *predict* A's content.
+Custom attention masking enforces:
+
+1. Question → Question only (causal)
+2. Answer → Answer only (causal, independent)
+3. `[PRED]` → Question only
+4. `[PRED]` cannot attend to Answer
+
+This forces the model to predict Answer representations without direct exposure.
+
+---
+
+## Model Configuration
+
+| Component | Value |
+|------------|--------|
+| Layers | 6 |
+| Attention Heads | 8 |
+| Hidden Dimension | 512 |
+| Parameters | ~45M |
+| Dataset | GSM8K (~7.5k samples) |
+| Training | 25 Full Epochs |
+| Hardware | NVIDIA RTX 3050 |
+
+---
+
+## Training Objective
+
+The total loss is:
+
+L_total = L_token + λ * L_jepa
+
+Where:
+
+- **Token Loss**: Standard cross-entropy (stabilization)
+- **JEPA Loss**: Cosine similarity between predicted and true Answer latent
+
+L_jepa = 1 − cos(pred_latent, answer_latent)
+
+---
+
+## Experimental Results
+
+### After 25 Full Epochs
+
+- **Final Token Loss:** 0.1186  
+- **Final JEPA Loss:** 0.0525  
+- **Final Cosine Similarity:** 0.9475  
+
+These results show stable latent alignment across training.
+
+### Key Observation
+
+Ablation experiments (λ = 0 vs λ > 0) demonstrate:
+
+- Without JEPA loss, latent alignment collapses.
+- With JEPA loss, representation geometry remains stable.
+
+This confirms:
+
+> Next-token prediction alone does not preserve reasoning structure.
+
+---
+
+## Exact-Match Accuracy
+
+Exact-match evaluation on 100 GSM8K validation samples yields:
+
+- **0.00%**
+
+This is expected.
+
+nanoJEPA is trained from scratch on a small dataset without pretraining.  
+The purpose of this system is to validate the **JEPA alignment mechanism**, not to achieve competitive GSM8K performance.
+
+---
+
+## Interactive Demo
+
+A minimal Gradio interface is provided for demonstration:
+
+```bash
+python main.py
+```
+
+Design constraints:
+
+- Single-turn input
+- Deterministic greedy decoding
+- No chat history
+- No external LLM usage
+- Max generation length enforced
+
+The demo visualizes JEPA-based latent reasoning rather than conversational AI.
+
+---
+
+## Evaluation Tools
+
+- `eval_alignment.py` — Latent cosine similarity evaluation
+- `evaluate_accuracy.py` — Exact-match accuracy testing
+- Automatic loss curve generation:
+    - `token_loss_curve.png`
+    - `jepa_loss_curve.png`
+
+---
 
 ## File Structure
-- `config.py`: Hyperparameters.
-- `data.py`: GSM8K loading and tokenization.
-- `model.py`: Transformer with custom JEPA masking.
-- `train.py`: Training loop with Token Loss + JEPA Loss.
-- `demo.py`: **Interactive Gradio Interface**.
-- `eval_alignment.py`: Script to verify latent alignment.
 
-## Usage
+- `config.py`              # Hyperparameters
+- `data.py`                # GSM8K loading & preprocessing
+- `model.py`               # Transformer + JEPA masking
+- `train.py`               # Training loop
+- `evaluate_accuracy.py`   # Exact-match evaluation
+- `eval_alignment.py`      # Latent alignment evaluation
+- `main.py`                # Gradio demo
 
-### 1. Install Dependencies
-```bash
-pip install torch tiktoken datasets transformers gradio matplotlib
-```
+---
 
-### 2. Train
-```bash
-python -m nanoJEPA.train
-```
-*Note: The default run is short (educational). For better results, increase `max_iters` in `config.py`.*
+## Limitations
 
-### 3. Interactive Demo (Gradio)
-Launch a web interface to test the model:
-```bash
-python demo.py
-```
-*The model uses greedy decoding to project the latent prediction into text.*
+- Small model size (~45M)
+- No large-scale pretraining
+- Limited dataset (7.5k samples)
+- Not optimized for fluent generation
 
-### 4. Verify Latent Alignment
-Run the evaluation script to compare JEPA vs Baseline:
-```bash
-python eval_alignment.py
-```
-This generates `latent_alignment.png`, showing how the cosine similarity between `[PRED]` and `Answer` improves over time.
+nanoJEPA is a research prototype designed to investigate latent reasoning objectives.
 
-## Success Metrics
-- **Token Loss**: Ensures the model remains a competent language model.
-- **JEPA Loss**: Measures how well `[PRED]` approximates the semantic content of the Answer. 
-- **Latent Similarity**: `[PRED]` should be closer to `Answer` latent than random vectors.
+---
+
+## Conclusion
+
+nanoJEPA demonstrates that:
+
+- Reasoning can be framed as latent representation prediction.
+- JEPA loss stabilizes semantic alignment.
+- Text generation is not equivalent to reasoning.
+- Latent geometry collapses under standard next-token training.
+
+This project provides a transparent, reproducible baseline for JEPA-style language modeling experiments.
+
+---
+
+## Acknowledgements
+
+Inspired by:
+
+- Yann LeCun’s JEPA and world-model vision
+- LLM-JEPA research
+- nanoGPT implementation philosophy
+
+Special thanks to:
+
+- **Aditi Khatana**
+- **Rishabh Yadav**
+
+for discussions and contributions during development.

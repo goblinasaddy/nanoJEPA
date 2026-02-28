@@ -151,11 +151,12 @@ class NanoJEPA(nn.Module):
             # range 0..q_len (inclusive of SEP for Q context?) 
             # Let's include SEP in Q's view as it marks end of Q.
             q_end = q_len + 1
-            mask[b, 0, :q_end, :q_end] = torch.triu(torch.ones(q_end, q_end), diagonal=1).to(device) * float('-inf')
+            tri_mask = torch.triu(torch.ones((q_end, q_end), device=device), diagonal=1)
+            mask[b, 0, :q_end, :q_end] = tri_mask * float('-inf')
             # The diagonal=1 makes upper triangle -inf (causal) which is what we want? 
             # Wait, 0 is allowed. The initialized value is -inf.
             # So, set the causal lower triangle to 0.
-            causal_mask_q = torch.tril(torch.ones(q_end, q_end, device=device))
+            causal_mask_q = torch.tril(torch.ones((q_end, q_end), device=device))
             mask[b, 0, :q_end, :q_end] = mask[b, 0, :q_end, :q_end].masked_fill(causal_mask_q == 1, 0.0)
 
             # 2. A attends to A (Causal) - INDEPENDENT of Q
@@ -165,7 +166,7 @@ class NanoJEPA(nn.Module):
             
             if a_seg_len > 0:
                 # Create causal mask for A part
-                causal_mask_a = torch.tril(torch.ones(a_seg_len, a_seg_len, device=device))
+                causal_mask_a = torch.tril(torch.ones((a_seg_len, a_seg_len), device=device))
                 # Apply to the block in main mask
                 # The region is [a_start:a_end, a_start:a_end]
                 # It currently is -inf. We set lower triangle to 0.

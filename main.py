@@ -26,9 +26,7 @@ from nanoJEPA.config import Config
 # Load Config
 config = Config()
 config.vocab_size = config.final_vocab_size
-device = 'cpu' 
-if torch.cuda.is_available():
-    device = 'cuda'
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 print(f"Loading model on {device}...")
 
@@ -39,6 +37,7 @@ if os.path.exists(checkpoint_path):
     state_dict = torch.load(checkpoint_path, map_location=device)
     model.load_state_dict(state_dict)
     print("Model loaded successfully.")
+    print(f"nanoJEPA trained for {config.num_epochs} epochs.")
 else:
     print(f"WARNING: Checkpoint {checkpoint_path} not found. Using random weights.")
 
