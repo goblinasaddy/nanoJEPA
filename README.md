@@ -110,6 +110,9 @@ L_jepa = 1 − cos(pred_latent, answer_latent)
 
 These results show stable latent alignment across training.
 
+![TOken Loss](out/token_loss_curve.png)
+![JEPA Loss](out/jepa_loss_curve.png)
+
 ### Key Observation
 
 Ablation experiments (λ = 0 vs λ > 0) demonstrate:
